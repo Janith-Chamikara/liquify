@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+
+model User {
+  id            String   @id @default(uuid())
+  clerkUserId   String @unique
+  username      String?  @unique
+  email         String   @unique
+  passwordHash  String?
+  fullName      String?
+  walletAddress String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLogin     DateTime?
+  
+  tokens        Token[]  @relation("UserCreatedTokens")
+
+  @@index([email])
+}
+
+model Token {
+  id          String   @id @default(uuid())
+  mintAddress String   @unique 
+  name        String
+  symbol      String
+  description String?  
+  imageUrl    String?  
+  supply      Int   
+  decimals    Int      @default(6)
+  website     String?
+  twitter     String?
+  telegram    String?
+  discord     String?
+  isListed    Boolean  @default(false) 
+  creatorWallet String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  creator     User     @relation("UserCreatedTokens", fields: [creatorWallet], references: [walletAddress])
+
+  @@index([mintAddress])
+}

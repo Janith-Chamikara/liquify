@@ -1,0 +1,32 @@
+[package]
+name = "smart_contract"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "smart_contract"
+
+[features]
+default = ["init-if-needed"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+init-if-needed = ["anchor-lang/init-if-needed"]
+
+
+[dependencies]
+anchor-lang = "0.32.1"
+anchor-spl = "0.32.1"
+# Pin to avoid edition2024 requirement (Solana BPF toolchain uses Cargo 1.84)
+constant_time_eq = "=0.3.1"
+blake3 = "=1.5.5"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
