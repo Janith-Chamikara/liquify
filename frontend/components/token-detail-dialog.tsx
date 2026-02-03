@@ -58,10 +58,7 @@ export function TokenDetailDialog({ token, open, onOpenChange }: Props) {
 
             <div className="relative h-48 w-48 md:h-full md:w-full max-h-[400px] aspect-square shadow-2xl rounded-2xl overflow-hidden ring-1 ring-border/50">
               <Avatar className="h-full w-full rounded-none">
-                <AvatarImage
-                  src={token.imageUrl}
-                  className="object-cover w-full h-full"
-                />
+                <AvatarImage src={token.imageUrl} className="object-contain " />
                 <AvatarFallback className="h-full w-full rounded-none text-4xl">
                   <ImageIcon className="h-12 w-12 text-muted-foreground opacity-50" />
                 </AvatarFallback>

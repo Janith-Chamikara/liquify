@@ -96,3 +96,235 @@ export const getTokens = async (walletAddress: string) => {
     }
   }
 };
+
+export const createLiquidityPool = async (formData: object) => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { error: "No logged in user" };
+  }
+
+  try {
+    const token = await getAuthToken();
+    const response = await api.post(
+      "/pool/create",
+      {
+        ...formData,
+      },
+      { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+    );
+    return {
+      message: response.data.message,
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const getLiquidityPools = async (walletAddress: string) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.get(`/pool/user/${walletAddress}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: response.data.message,
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const getPriceHistory = async (
+  poolAddress: string,
+  timeRange: "1H" | "24H" | "7D" | "30D" | "ALL" = "24H",
+) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.get(
+      `/pool/${poolAddress}/price-history?range=${timeRange}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      },
+    );
+    return {
+      message: "Price history fetched successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const recordSwap = async (data: {
+  poolAddress: string;
+  tokenAReserve: number;
+  tokenBReserve: number;
+  txSignature: string;
+}) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.post("/pool/record-swap", data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Swap recorded successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+// Public endpoints for explore page
+
+export const getAllTokens = async () => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.get("/token/get-all", {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Tokens fetched successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const getAllPools = async () => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.get("/pool/get-all", {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Pools fetched successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const addLiquidity = async (data: {
+  poolAddress: string;
+  amountA: number;
+  amountB: number;
+  newReserveA: number;
+  newReserveB: number;
+  txSignature: string;
+}) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.post("/pool/add-liquidity", data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Liquidity added successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};

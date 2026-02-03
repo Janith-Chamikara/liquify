@@ -16,4 +16,9 @@ export class TokenController {
   async getTokensByUser(@Param('walletAddress') walletAddress: string) {
     return this.tokenService.getUserTokens(walletAddress);
   }
+
+  @Get('get-all')
+  async getAllTokensHandler() {
+    return this.tokenService.getAllTokens();
+  }
 }

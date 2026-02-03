@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Settings,
   HelpCircle,
+  Droplets,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +20,16 @@ const mainNav = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Explore",
+    href: "/dashboard/explore",
+    icon: Compass,
+  },
+  {
+    label: "Liquidity Pools",
+    href: "/dashboard/liquidity-pools",
+    icon: Droplets,
   },
 ];
 

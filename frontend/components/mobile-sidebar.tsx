@@ -12,6 +12,7 @@ import {
   HelpCircle,
   Menu,
   X,
+  Droplets,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,11 @@ const mainNav = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Liquidity Pools",
+    href: "/dashboard/liquidity-pools",
+    icon: Droplets,
   },
   {
     label: "My Coins",

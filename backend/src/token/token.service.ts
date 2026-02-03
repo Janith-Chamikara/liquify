@@ -41,4 +41,8 @@ export class TokenService {
       },
     });
   }
+
+  async getAllTokens() {
+    return this.prisma.token.findMany();
+  }
 }

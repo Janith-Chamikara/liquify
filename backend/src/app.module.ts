@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ClerkAuthGuard } from './auth/guards/clerk-auth.guard';
 import { TokenModule } from './token/token.module';
+import { PoolModule } from './pool/pool.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { TokenModule } from './token/token.module';
     }),
     AuthModule,
     TokenModule,
+    PoolModule,
   ],
   providers: [
     ClerkClientProvider,

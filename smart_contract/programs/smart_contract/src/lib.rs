@@ -1,7 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer, MintTo, Burn};
+use anchor_spl::metadata::{
+    create_metadata_accounts_v3,
+    CreateMetadataAccountsV3,
+    Metadata,
+    mpl_token_metadata::types::DataV2,
+};
 
-declare_id!("nwjaWYz3F8AfkEemTVZJjCT3ZK9qHwai1W2EXBFgeQQ");
+declare_id!("9NkKG55KStQNSdswjAt6tbQnNxTsLaBiExswWXXmcZw4");
 
 /// Integer square root for u128 using Newton's method
 fn integer_sqrt(n: u128) -> u128 {
@@ -25,14 +31,65 @@ pub mod smart_contract {
     // INSTRUCTION 1: INITIALIZE POOL
     // Creates the Vaults, the LP Mint, and the Pool State account.
     // -------------------------------------------------------------------------
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        let pool = &mut ctx.accounts.pool;
-        pool.token_a_mint = ctx.accounts.token_a_mint.key();
-        pool.token_b_mint = ctx.accounts.token_b_mint.key();
-        pool.lp_mint = ctx.accounts.lp_mint.key();
-        pool.bump = ctx.bumps.pool; // Store bump for signing later
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        token_a_symbol: String,
+        token_b_symbol: String,
+    ) -> Result<()> {
+        // Store the mint keys and bump for later use
+        let token_a_mint = ctx.accounts.token_a_mint.key();
+        let token_b_mint = ctx.accounts.token_b_mint.key();
+        let lp_mint_key = ctx.accounts.lp_mint.key();
+        let bump = ctx.bumps.pool;
 
-        msg!("Pool Initialized! LP Mint: {}", pool.lp_mint);
+        // Initialize pool state
+        let pool = &mut ctx.accounts.pool;
+        pool.token_a_mint = token_a_mint;
+        pool.token_b_mint = token_b_mint;
+        pool.lp_mint = lp_mint_key;
+        pool.bump = bump;
+
+        // Create LP Token Metadata
+        let lp_name = format!("Igloo {} / {} LP", token_a_symbol, token_b_symbol);
+        let lp_symbol = format!("{}-{}-LP", token_a_symbol, token_b_symbol);
+        
+        // Seeds for PDA signing (use stored values to avoid borrow issues)
+        let seeds = &[
+            b"pool".as_ref(),
+            token_a_mint.as_ref(),
+            token_b_mint.as_ref(),
+            &[bump],
+        ];
+        let signer_seeds = &[&seeds[..]];
+
+        // Create metadata for LP token
+        let data_v2 = DataV2 {
+            name: lp_name.clone(),
+            symbol: lp_symbol,
+            uri: String::from("https://igloo.exchange/lp-token-metadata.json"),
+            seller_fee_basis_points: 0,
+            creators: None,
+            collection: None,
+            uses: None,
+        };
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_metadata_program.to_account_info(),
+            CreateMetadataAccountsV3 {
+                metadata: ctx.accounts.lp_metadata.to_account_info(),
+                mint: ctx.accounts.lp_mint.to_account_info(),
+                mint_authority: ctx.accounts.pool.to_account_info(),
+                update_authority: ctx.accounts.pool.to_account_info(),
+                payer: ctx.accounts.creator.to_account_info(),
+                system_program: ctx.accounts.system_program.to_account_info(),
+                rent: ctx.accounts.rent.to_account_info(),
+            },
+            signer_seeds,
+        );
+
+        create_metadata_accounts_v3(cpi_ctx, data_v2, true, true, None)?;
+
+        msg!("Pool Initialized! LP Mint: {} with metadata: {}", lp_mint_key, lp_name);
         Ok(())
     }
 
@@ -307,9 +364,23 @@ pub struct Initialize<'info> {
     )]
     pub vault_b: Account<'info, TokenAccount>,
 
+    /// CHECK: Created via CPI to token metadata program
+    #[account(
+        mut,
+        seeds = [
+            b"metadata",
+            token_metadata_program.key().as_ref(),
+            lp_mint.key().as_ref(),
+        ],
+        bump,
+        seeds::program = token_metadata_program.key(),
+    )]
+    pub lp_metadata: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, anchor_spl::associated_token::AssociatedToken>,
+    pub token_metadata_program: Program<'info, Metadata>,
     pub rent: Sysvar<'info, Rent>,
 }
 

@@ -22,6 +22,7 @@ model User {
   lastLogin     DateTime?
   
   tokens        Token[]  @relation("UserCreatedTokens")
+  pools         LiquidityPool[] @relation("UserCreatedPools")
 
   @@index([email])
 }
@@ -46,5 +47,52 @@ model Token {
   
   creator     User     @relation("UserCreatedTokens", fields: [creatorWallet], references: [walletAddress])
 
+  poolsAsTokenA LiquidityPool[] @relation("TokenAPool")
+  poolsAsTokenB LiquidityPool[] @relation("TokenBPool")
+
   @@index([mintAddress])
+}
+
+model LiquidityPool {
+  id              String   @id @default(uuid())
+  poolAddress     String   @unique
+  tokenAMint      String
+  tokenBMint      String
+  lpMintAddress   String   @unique
+  vaultAAddress   String
+  vaultBAddress   String
+  tokenAReserve   Float    @default(0)
+  tokenBReserve   Float    @default(0)
+  lpTotalSupply   Float    @default(0)
+  creatorWallet   String
+  txSignature     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tokenA          Token    @relation("TokenAPool", fields: [tokenAMint], references: [mintAddress])
+  tokenB          Token    @relation("TokenBPool", fields: [tokenBMint], references: [mintAddress])
+  creator         User     @relation("UserCreatedPools", fields: [creatorWallet], references: [walletAddress])
+  priceHistory    PriceHistory[]
+
+  @@index([poolAddress])
+  @@index([tokenAMint])
+  @@index([tokenBMint])
+  @@index([creatorWallet])
+}
+
+model PriceHistory {
+  id              String   @id @default(uuid())
+  poolId          String
+  price           Float    // Price of Token A in terms of Token B
+  tokenAReserve   Float
+  tokenBReserve   Float
+  txSignature     String?
+  txType          String   @default("swap") // "swap", "deposit", "withdraw", "init"
+  timestamp       DateTime @default(now())
+  
+  pool            LiquidityPool @relation(fields: [poolId], references: [id])
+
+  @@index([poolId])
+  @@index([timestamp])
+  @@index([poolId, timestamp])
 }

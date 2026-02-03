@@ -80,3 +80,31 @@ export const onboardingSchema = z.object({
 });
 
 export type OnboardingFormValues = z.infer<typeof onboardingSchema>;
+
+export const createLiquidityPoolSchema = z
+  .object({
+    tokenAMint: z
+      .string()
+      .min(32, "Token A mint address is required")
+      .max(44, "Invalid mint address"),
+    tokenBMint: z
+      .string()
+      .min(32, "Token B mint address is required")
+      .max(44, "Invalid mint address"),
+    initialTokenAAmount: z
+      .number()
+      .positive("Amount must be positive")
+      .min(0.000001, "Minimum amount is 0.000001"),
+    initialTokenBAmount: z
+      .number()
+      .positive("Amount must be positive")
+      .min(0.000001, "Minimum amount is 0.000001"),
+  })
+  .refine((data) => data.tokenAMint !== data.tokenBMint, {
+    message: "Token A and Token B must be different",
+    path: ["tokenBMint"],
+  });
+
+export type CreateLiquidityPoolFormValues = z.infer<
+  typeof createLiquidityPoolSchema
+>;
