@@ -2,49 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Coins,
-  Compass,
-  PlusCircle,
-  LayoutDashboard,
-  Settings,
-  HelpCircle,
-  Droplets,
-} from "lucide-react";
+import { Compass, LayoutDashboard, Settings, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-const mainNav = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Explore",
-    href: "/dashboard/explore",
-    icon: Compass,
-  },
-  {
-    label: "Liquidity Pools",
-    href: "/dashboard/liquidity-pools",
-    icon: Droplets,
-  },
-];
-
-const secondaryNav = [
-  {
-    label: "Settings",
-    href: "/dashboard/settings",
-    icon: Settings,
-  },
-  {
-    label: "Help & Support",
-    href: "/dashboard/help",
-    icon: HelpCircle,
-  },
-];
 
 export function DashboardSidebar() {
   const pathname = usePathname();

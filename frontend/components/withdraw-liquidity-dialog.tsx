@@ -27,8 +27,9 @@ import {
 } from "lucide-react";
 import { LiquidityPool } from "@/lib/types";
 import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
-import { withdrawLiquidity } from "@/lib/actions";
+import { withdrawLiquidity, recordTransaction } from "@/lib/actions";
 import { toast } from "sonner";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 interface WithdrawLiquidityDialogProps {
   pool: LiquidityPool | null;
@@ -57,6 +58,7 @@ export function WithdrawLiquidityDialog({
 
   const { connected, withdrawLiquidity: withdrawLiquidityOnChain } =
     useAnchorProgram();
+  const { publicKey } = useWallet();
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -161,6 +163,19 @@ export function WithdrawLiquidityDialog({
         newReserveB: Math.max(0, newReserveB),
         txSignature: result.signature,
       });
+
+      // Record transaction for history
+      if (publicKey) {
+        await recordTransaction({
+          txSignature: result.signature,
+          txType: "withdraw",
+          walletAddress: publicKey.toBase58(),
+          poolAddress: pool.poolAddress,
+          tokenAAmount: result.amountA,
+          tokenBAmount: result.amountB,
+          lpAmount: lpAmountNum,
+        });
+      }
 
       setTxSignature(result.signature);
       setWithdrawResult({

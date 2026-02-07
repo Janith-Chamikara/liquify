@@ -26,8 +26,9 @@ import {
 } from "lucide-react";
 import { LiquidityPool } from "@/lib/types";
 import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
-import { addLiquidity } from "@/lib/actions";
+import { addLiquidity, recordTransaction } from "@/lib/actions";
 import { toast } from "sonner";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 interface AddLiquidityDialogProps {
   pool: LiquidityPool | null;
@@ -49,8 +50,8 @@ export function AddLiquidityDialog({
   const [txSignature, setTxSignature] = useState("");
 
   const { connected, depositLiquidity } = useAnchorProgram();
+  const { publicKey } = useWallet();
 
-  // Calculate the current price ratio
   const priceRatio =
     pool && pool.tokenAReserve > 0
       ? pool.tokenBReserve / pool.tokenAReserve
@@ -78,7 +79,6 @@ export function AddLiquidityDialog({
     }
   };
 
-  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
       setAmountA("");
@@ -88,15 +88,12 @@ export function AddLiquidityDialog({
     }
   }, [open]);
 
-  // Estimate LP tokens to receive
   const estimateLpTokens = () => {
     if (!pool || !amountA || isNaN(parseFloat(amountA))) return 0;
 
     const amountANum = parseFloat(amountA);
 
     // LP tokens = (deposit_amount_a / reserve_a) * total_lp_supply
-    // Since we don't have total LP supply from backend, we estimate based on reserves
-    // For simplicity, we'll show the proportional share
     if (pool.tokenAReserve > 0) {
       const sharePercent = (amountANum / pool.tokenAReserve) * 100;
       return sharePercent;
@@ -148,6 +145,18 @@ export function AddLiquidityDialog({
         newReserveB,
         txSignature: result.signature,
       });
+
+      // Record transaction for history
+      if (publicKey) {
+        await recordTransaction({
+          txSignature: result.signature,
+          txType: "deposit",
+          walletAddress: publicKey.toBase58(),
+          poolAddress: pool.poolAddress,
+          tokenAAmount: amountANum,
+          tokenBAmount: amountBNum,
+        });
+      }
 
       setTxSignature(result.signature);
       setIsSuccess(true);

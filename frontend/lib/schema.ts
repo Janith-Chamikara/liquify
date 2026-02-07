@@ -36,7 +36,6 @@ export const createTokenSchema = z.object({
 
   supply: z.coerce
     .number()
-    .int()
     .positive("Supply must be a positive number")
     .min(1, "Minimum supply is 1")
     .int("Supply must be a whole number"),

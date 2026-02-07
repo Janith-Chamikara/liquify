@@ -1,9 +1,6 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
 import CreateTokenDialog from "./create-token-form";
 
 export function DashboardHeader() {

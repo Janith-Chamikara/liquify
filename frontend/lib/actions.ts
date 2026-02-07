@@ -329,6 +329,49 @@ export const addLiquidity = async (data: {
   }
 };
 
+export const syncPoolReserves = async (data: {
+  poolAddress: string;
+  tokenAReserve: number;
+  tokenBReserve: number;
+}) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.post(
+      "/pool/record-price",
+      {
+        poolAddress: data.poolAddress,
+        tokenAReserve: data.tokenAReserve,
+        tokenBReserve: data.tokenBReserve,
+        txType: "swap", // Using 'swap' as a general sync type
+      },
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      },
+    );
+    return {
+      message: "Pool data synced successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
 export const withdrawLiquidity = async (data: {
   poolAddress: string;
   lpAmount: number;
@@ -353,6 +396,99 @@ export const withdrawLiquidity = async (data: {
     });
     return {
       message: "Liquidity withdrawn successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+// Transaction History Actions
+export const recordTransaction = async (data: {
+  txSignature: string;
+  txType: "swap" | "deposit" | "withdraw" | "create_token" | "create_pool";
+  walletAddress: string;
+  poolAddress?: string;
+  tokenInMint?: string;
+  tokenOutMint?: string;
+  tokenInSymbol?: string;
+  tokenOutSymbol?: string;
+  amountIn?: number;
+  amountOut?: number;
+  tokenAAmount?: number;
+  tokenBAmount?: number;
+  lpAmount?: number;
+  tokenMint?: string;
+  tokenName?: string;
+  tokenSymbol?: string;
+}) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.post("/pool/transaction", data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Transaction recorded successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};
+
+export const getTransactions = async (
+  walletAddress: string,
+  options?: {
+    txType?: string;
+    limit?: number;
+    offset?: number;
+  },
+) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const params = new URLSearchParams();
+    if (options?.txType) params.append("txType", options.txType);
+    if (options?.limit) params.append("limit", options.limit.toString());
+    if (options?.offset) params.append("offset", options.offset.toString());
+
+    const response = await api.get(
+      `/pool/transactions/${walletAddress}?${params.toString()}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      },
+    );
+    return {
+      message: "Transactions fetched successfully",
       data: response.data,
       status: "SUCCESS",
     } as ResponseStatus;

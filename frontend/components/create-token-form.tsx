@@ -3,15 +3,7 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ImagePlus,
-  X,
-  Upload,
-  Globe,
-  Twitter,
-  Send,
-  MessageCircle,
-} from "lucide-react";
+import { X, Upload, Globe, Twitter, Send, MessageCircle } from "lucide-react";
 
 import {
   Dialog,
@@ -356,7 +348,11 @@ export default function CreateTokenDialog() {
                         <FormItem>
                           <FormLabel>Total Supply</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} />
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value as string}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -369,7 +365,11 @@ export default function CreateTokenDialog() {
                         <FormItem>
                           <FormLabel>Decimals</FormLabel>
                           <FormControl>
-                            <Input type="number" {...field} />
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value as number}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

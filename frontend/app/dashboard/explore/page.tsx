@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getAllTokens, getAllPools } from "@/lib/actions";
-import { ResponseStatus, LiquidityPool } from "@/lib/types";
+import { getAllTokens, getAllPools, syncPoolReserves } from "@/lib/actions";
+import {
+  ResponseStatus,
+  LiquidityPool,
+  PoolWithOnChainData,
+  Token,
+} from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +24,7 @@ import {
   Search,
   Plus,
   Minus,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SwapDialog } from "@/components/swap-dialog";
@@ -26,35 +32,22 @@ import { PoolDetailDialog } from "@/components/pool-detail-dialog";
 import { AddLiquidityDialog } from "@/components/add-liquidity-dialog";
 import { WithdrawLiquidityDialog } from "@/components/withdraw-liquidity-dialog";
 import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
-
-// Token type based on backend response
-type Token = {
-  id: string;
-  mintAddress: string;
-  name: string;
-  symbol: string;
-  description?: string;
-  imageUrl?: string;
-  supply: number;
-  decimals: number;
-  website?: string;
-  twitter?: string;
-  creatorWallet: string;
-  createdAt: string;
-};
+import PoolCard from "@/components/pool-card";
 
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPool, setSelectedPool] = useState<LiquidityPool | null>(null);
-  const [swapPool, setSwapPool] = useState<LiquidityPool | null>(null);
+  const [selectedPool, setSelectedPool] = useState<PoolWithOnChainData | null>(
+    null,
+  );
+  const [swapPool, setSwapPool] = useState<PoolWithOnChainData | null>(null);
   const [addLiquidityPool, setAddLiquidityPool] =
-    useState<LiquidityPool | null>(null);
+    useState<PoolWithOnChainData | null>(null);
   const [withdrawLiquidityPool, setWithdrawLiquidityPool] =
-    useState<LiquidityPool | null>(null);
+    useState<PoolWithOnChainData | null>(null);
 
-  const { getUserLpBalance, connected } = useAnchorProgram();
+  const { getUserLpBalance, getOnChainPoolData, connected } =
+    useAnchorProgram();
 
-  // Fetch user's LP balance when withdraw dialog opens
   const { data: userLpBalance = 0 } = useQuery({
     queryKey: [
       "user-lp-balance",
@@ -72,7 +65,6 @@ export default function ExplorePage() {
     enabled: !!withdrawLiquidityPool && connected,
   });
 
-  // Fetch all tokens
   const { data: tokensData, isLoading: tokensLoading } = useQuery<
     ResponseStatus | undefined
   >({
@@ -80,7 +72,6 @@ export default function ExplorePage() {
     queryFn: getAllTokens,
   });
 
-  // Fetch all pools
   const {
     data: poolsData,
     isLoading: poolsLoading,
@@ -93,7 +84,6 @@ export default function ExplorePage() {
   const tokens = (tokensData?.data as Token[]) ?? [];
   const pools = (poolsData?.data as LiquidityPool[]) ?? [];
 
-  // Filter based on search
   const filteredTokens = tokens.filter(
     (token) =>
       token.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -211,10 +201,10 @@ export default function ExplorePage() {
             <PoolCard
               key={pool.id}
               pool={pool}
-              onViewDetails={() => setSelectedPool(pool)}
-              onSwap={() => setSwapPool(pool)}
-              onAddLiquidity={() => setAddLiquidityPool(pool)}
-              onWithdrawLiquidity={() => setWithdrawLiquidityPool(pool)}
+              onViewDetails={(p) => setSelectedPool(p)}
+              onSwap={(p) => setSwapPool(p)}
+              onAddLiquidity={(p) => setAddLiquidityPool(p)}
+              onWithdrawLiquidity={(p) => setWithdrawLiquidityPool(p)}
             />
           ))}
         </div>
@@ -252,199 +242,5 @@ export default function ExplorePage() {
         userLpBalance={userLpBalance}
       />
     </div>
-  );
-}
-
-// Pool Card Component
-function PoolCard({
-  pool,
-  onViewDetails,
-  onSwap,
-  onAddLiquidity,
-  onWithdrawLiquidity,
-}: {
-  pool: LiquidityPool;
-  onViewDetails: () => void;
-  onSwap: () => void;
-  onAddLiquidity: () => void;
-  onWithdrawLiquidity: () => void;
-}) {
-  const price =
-    pool.tokenAReserve > 0
-      ? (pool.tokenBReserve / pool.tokenAReserve).toFixed(6)
-      : "0";
-
-  return (
-    <Card className="hover:shadow-lg transition-all group">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex -space-x-3">
-              <Avatar className="h-10 w-10 border-2 border-background ring-2 ring-background">
-                <AvatarImage src={pool.tokenA?.imageUrl} />
-                <AvatarFallback className="bg-primary/20 text-sm font-bold">
-                  {pool.tokenA?.symbol?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <Avatar className="h-10 w-10 border-2 border-background ring-2 ring-background">
-                <AvatarImage src={pool.tokenB?.imageUrl} />
-                <AvatarFallback className="bg-secondary/20 text-sm font-bold">
-                  {pool.tokenB?.symbol?.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-            <div>
-              <h3 className="font-semibold">
-                {pool.tokenA?.symbol}/{pool.tokenB?.symbol}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {pool.tokenA?.name} / {pool.tokenB?.name}
-              </p>
-            </div>
-          </div>
-          <Badge variant="secondary" className="gap-1">
-            <Droplets className="h-3 w-3" />
-            LP
-          </Badge>
-        </div>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Price</span>
-            <span className="font-mono font-medium">
-              1 {pool.tokenA?.symbol} = {price} {pool.tokenB?.symbol}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {pool.tokenA?.symbol} Reserve
-            </span>
-            <span className="font-mono font-medium">
-              {pool.tokenAReserve.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {pool.tokenB?.symbol} Reserve
-            </span>
-            <span className="font-mono font-medium">
-              {pool.tokenBReserve.toLocaleString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={onViewDetails}
-          >
-            Details
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 gap-1"
-            onClick={onAddLiquidity}
-          >
-            <Plus className="h-3 w-3" />
-            Add
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 gap-1 text-destructive hover:text-destructive"
-            onClick={onWithdrawLiquidity}
-          >
-            <Minus className="h-3 w-3" />
-            Remove
-          </Button>
-          <Button size="sm" className="flex-1 gap-1" onClick={onSwap}>
-            <ArrowRightLeft className="h-3 w-3" />
-            Swap
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Token Card Component
-function TokenCard({
-  token,
-  pools,
-  onSwap,
-}: {
-  token: Token;
-  pools: LiquidityPool[];
-  onSwap: (pool: LiquidityPool) => void;
-}) {
-  // Find pools that include this token
-  const tokenPools = pools.filter(
-    (pool) =>
-      pool.tokenAMint === token.mintAddress ||
-      pool.tokenBMint === token.mintAddress,
-  );
-
-  return (
-    <Card className="hover:shadow-lg transition-all group">
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center text-center mb-4">
-          <Avatar className="h-16 w-16 mb-3">
-            <AvatarImage src={token.imageUrl} />
-            <AvatarFallback className="text-xl font-bold bg-primary/20">
-              {token.symbol?.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <h3 className="font-semibold text-lg">{token.symbol}</h3>
-          <p className="text-sm text-muted-foreground">{token.name}</p>
-        </div>
-
-        <div className="space-y-2 mb-4">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Supply</span>
-            <span className="font-mono font-medium">
-              {token.supply.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Decimals</span>
-            <span className="font-mono font-medium">{token.decimals}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Pools</span>
-            <span className="font-mono font-medium">{tokenPools.length}</span>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() =>
-              window.open(
-                `https://explorer.solana.com/address/${token.mintAddress}?cluster=devnet`,
-                "_blank",
-              )
-            }
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            Explorer
-          </Button>
-          {tokenPools.length > 0 && (
-            <Button
-              size="sm"
-              className="flex-1 gap-1"
-              onClick={() => onSwap(tokenPools[0])}
-            >
-              <ArrowRightLeft className="h-3 w-3" />
-              Trade
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }

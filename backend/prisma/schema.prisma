@@ -96,3 +96,38 @@ model PriceHistory {
   @@index([timestamp])
   @@index([poolId, timestamp])
 }
+
+model Transaction {
+  id              String   @id @default(uuid())
+  txSignature     String   @unique
+  txType          String   // "swap", "deposit", "withdraw", "create_token", "create_pool"
+  walletAddress   String
+  poolAddress     String?
+  
+  // For swaps
+  tokenInMint     String?
+  tokenOutMint    String?
+  tokenInSymbol   String?
+  tokenOutSymbol  String?
+  amountIn        Float?
+  amountOut       Float?
+  
+  // For deposits/withdrawals
+  tokenAAmount    Float?
+  tokenBAmount    Float?
+  lpAmount        Float?
+  
+  // For token creation
+  tokenMint       String?
+  tokenName       String?
+  tokenSymbol     String?
+  
+  status          String   @default("confirmed") // "pending", "confirmed", "failed"
+  timestamp       DateTime @default(now())
+
+  @@index([walletAddress])
+  @@index([poolAddress])
+  @@index([txType])
+  @@index([timestamp])
+  @@index([walletAddress, timestamp])
+}

@@ -451,4 +451,84 @@ export class PoolService {
       txType: 'swap',
     });
   }
+
+  // Transaction History Methods
+  async recordTransaction(data: {
+    txSignature: string;
+    txType: 'swap' | 'deposit' | 'withdraw' | 'create_token' | 'create_pool';
+    walletAddress: string;
+    poolAddress?: string;
+    tokenInMint?: string;
+    tokenOutMint?: string;
+    tokenInSymbol?: string;
+    tokenOutSymbol?: string;
+    amountIn?: number;
+    amountOut?: number;
+    tokenAAmount?: number;
+    tokenBAmount?: number;
+    lpAmount?: number;
+    tokenMint?: string;
+    tokenName?: string;
+    tokenSymbol?: string;
+  }) {
+    return this.prisma.transaction.create({
+      data: {
+        txSignature: data.txSignature,
+        txType: data.txType,
+        walletAddress: data.walletAddress,
+        poolAddress: data.poolAddress,
+        tokenInMint: data.tokenInMint,
+        tokenOutMint: data.tokenOutMint,
+        tokenInSymbol: data.tokenInSymbol,
+        tokenOutSymbol: data.tokenOutSymbol,
+        amountIn: data.amountIn,
+        amountOut: data.amountOut,
+        tokenAAmount: data.tokenAAmount,
+        tokenBAmount: data.tokenBAmount,
+        lpAmount: data.lpAmount,
+        tokenMint: data.tokenMint,
+        tokenName: data.tokenName,
+        tokenSymbol: data.tokenSymbol,
+        status: 'confirmed',
+      },
+    });
+  }
+
+  async getTransactionsByWallet(
+    walletAddress: string,
+    options?: {
+      txType?: string;
+      limit?: number;
+      offset?: number;
+    },
+  ) {
+    const where: any = { walletAddress };
+
+    if (options?.txType) {
+      where.txType = options.txType;
+    }
+
+    const [transactions, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        orderBy: { timestamp: 'desc' },
+        take: options?.limit || 50,
+        skip: options?.offset || 0,
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+
+    return {
+      transactions,
+      total,
+      hasMore: (options?.offset || 0) + transactions.length < total,
+    };
+  }
+
+  async getRecentTransactions(limit: number = 20) {
+    return this.prisma.transaction.findMany({
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+  }
 }
