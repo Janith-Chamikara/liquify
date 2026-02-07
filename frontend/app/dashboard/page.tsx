@@ -36,24 +36,11 @@ export default function DashboardPage() {
         totalSupply={totalSupply}
       />
 
-      <div className="space-y-6">
-        <Tabs defaultValue="my-tokens" className="w-full">
-          <TabsList className="mb-4">
-            <TabsTrigger value="my-tokens">My Tokens</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-          <TabsContent value="my-tokens">
-            <TokenTable
-              tokens={tokens}
-              isLoading={isLoading}
-              onSelect={setSelectedToken}
-            />
-          </TabsContent>
-          <TabsContent value="activity">
-            <RecentActivity tokens={tokens} />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <TokenTable
+        tokens={tokens}
+        isLoading={isLoading}
+        onSelect={setSelectedToken}
+      />
 
       <TokenDetailDialog
         token={selectedToken}

@@ -18,11 +18,14 @@ import {
   ExternalLink,
   Search,
   Plus,
+  Minus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SwapDialog } from "@/components/swap-dialog";
 import { PoolDetailDialog } from "@/components/pool-detail-dialog";
 import { AddLiquidityDialog } from "@/components/add-liquidity-dialog";
+import { WithdrawLiquidityDialog } from "@/components/withdraw-liquidity-dialog";
+import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
 
 // Token type based on backend response
 type Token = {
@@ -46,6 +49,28 @@ export default function ExplorePage() {
   const [swapPool, setSwapPool] = useState<LiquidityPool | null>(null);
   const [addLiquidityPool, setAddLiquidityPool] =
     useState<LiquidityPool | null>(null);
+  const [withdrawLiquidityPool, setWithdrawLiquidityPool] =
+    useState<LiquidityPool | null>(null);
+
+  const { getUserLpBalance, connected } = useAnchorProgram();
+
+  // Fetch user's LP balance when withdraw dialog opens
+  const { data: userLpBalance = 0 } = useQuery({
+    queryKey: [
+      "user-lp-balance",
+      withdrawLiquidityPool?.poolAddress,
+      connected,
+    ],
+    queryFn: async () => {
+      if (!withdrawLiquidityPool || !connected) return 0;
+      return await getUserLpBalance(
+        withdrawLiquidityPool.tokenAMint,
+        withdrawLiquidityPool.tokenBMint,
+        6,
+      );
+    },
+    enabled: !!withdrawLiquidityPool && connected,
+  });
 
   // Fetch all tokens
   const { data: tokensData, isLoading: tokensLoading } = useQuery<
@@ -150,108 +175,50 @@ export default function ExplorePage() {
         </Card>
       </div>
 
-      {/* Tabs for Tokens and Pools */}
-      <Tabs defaultValue="pools" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="pools" className="gap-2">
-            <Droplets className="h-4 w-4" />
-            Liquidity Pools ({filteredPools.length})
-          </TabsTrigger>
-          <TabsTrigger value="tokens" className="gap-2">
-            <Coins className="h-4 w-4" />
-            Tokens ({filteredTokens.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Pools Tab */}
 
-        {/* Pools Tab */}
-        <TabsContent value="pools" className="space-y-4">
-          {poolsLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : filteredPools.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                  <Droplets className="h-8 w-8 text-muted-foreground" />
+      {poolsLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">No Pools Found</h3>
-                <p className="text-muted-foreground text-center max-w-sm">
-                  {searchQuery
-                    ? "No pools match your search query."
-                    : "No liquidity pools available yet."}
-                </p>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredPools.map((pool) => (
-                <PoolCard
-                  key={pool.id}
-                  pool={pool}
-                  onViewDetails={() => setSelectedPool(pool)}
-                  onSwap={() => setSwapPool(pool)}
-                  onAddLiquidity={() => setAddLiquidityPool(pool)}
-                />
-              ))}
+          ))}
+        </div>
+      ) : filteredPools.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="rounded-full bg-muted p-4 mb-4">
+              <Droplets className="h-8 w-8 text-muted-foreground" />
             </div>
-          )}
-        </TabsContent>
-
-        {/* Tokens Tab */}
-        <TabsContent value="tokens" className="space-y-4">
-          {tokensLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i}>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      <Skeleton className="h-16 w-16 rounded-full mx-auto" />
-                      <Skeleton className="h-4 w-3/4 mx-auto" />
-                      <Skeleton className="h-4 w-1/2 mx-auto" />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : filteredTokens.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <div className="rounded-full bg-muted p-4 mb-4">
-                  <Coins className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No Tokens Found</h3>
-                <p className="text-muted-foreground text-center max-w-sm">
-                  {searchQuery
-                    ? "No tokens match your search query."
-                    : "No tokens available yet."}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredTokens.map((token) => (
-                <TokenCard
-                  key={token.id}
-                  token={token}
-                  pools={pools}
-                  onSwap={setSwapPool}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            <h3 className="text-lg font-semibold mb-2">No Pools Found</h3>
+            <p className="text-muted-foreground text-center max-w-sm">
+              {searchQuery
+                ? "No pools match your search query."
+                : "No liquidity pools available yet."}
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredPools.map((pool) => (
+            <PoolCard
+              key={pool.id}
+              pool={pool}
+              onViewDetails={() => setSelectedPool(pool)}
+              onSwap={() => setSwapPool(pool)}
+              onAddLiquidity={() => setAddLiquidityPool(pool)}
+              onWithdrawLiquidity={() => setWithdrawLiquidityPool(pool)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Pool Detail Dialog */}
       <PoolDetailDialog
@@ -275,6 +242,15 @@ export default function ExplorePage() {
         onOpenChange={(open) => !open && setAddLiquidityPool(null)}
         onSuccess={() => refetchPools()}
       />
+
+      {/* Withdraw Liquidity Dialog */}
+      <WithdrawLiquidityDialog
+        pool={withdrawLiquidityPool}
+        open={!!withdrawLiquidityPool}
+        onOpenChange={(open) => !open && setWithdrawLiquidityPool(null)}
+        onSuccess={() => refetchPools()}
+        userLpBalance={userLpBalance}
+      />
     </div>
   );
 }
@@ -285,11 +261,13 @@ function PoolCard({
   onViewDetails,
   onSwap,
   onAddLiquidity,
+  onWithdrawLiquidity,
 }: {
   pool: LiquidityPool;
   onViewDetails: () => void;
   onSwap: () => void;
   onAddLiquidity: () => void;
+  onWithdrawLiquidity: () => void;
 }) {
   const price =
     pool.tokenAReserve > 0
@@ -355,7 +333,7 @@ function PoolCard({
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -372,6 +350,15 @@ function PoolCard({
           >
             <Plus className="h-3 w-3" />
             Add
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 gap-1 text-destructive hover:text-destructive"
+            onClick={onWithdrawLiquidity}
+          >
+            <Minus className="h-3 w-3" />
+            Remove
           </Button>
           <Button size="sm" className="flex-1 gap-1" onClick={onSwap}>
             <ArrowRightLeft className="h-3 w-3" />

@@ -50,8 +50,10 @@ pub mod smart_contract {
         pool.bump = bump;
 
         // Create LP Token Metadata
-        let lp_name = format!("Igloo {} / {} LP", token_a_symbol, token_b_symbol);
-        let lp_symbol = format!("{}-{}-LP", token_a_symbol, token_b_symbol);
+        let lp_name = format!("Liquify {} / {} LP", token_a_symbol, token_b_symbol);
+        let sym_a: String = token_a_symbol.chars().take(4).collect();
+        let sym_b: String = token_b_symbol.chars().take(4).collect();
+        let lp_symbol = format!("{}{}-LP", sym_a, sym_b);
         
         // Seeds for PDA signing (use stored values to avoid borrow issues)
         let seeds = &[

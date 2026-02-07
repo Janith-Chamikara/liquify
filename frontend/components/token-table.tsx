@@ -86,7 +86,6 @@ export function TokenTable({ tokens, isLoading, onSelect }: TokenTableProps) {
               <TableHead className="pl-6">Token</TableHead>
               <TableHead>Symbol</TableHead>
               <TableHead className="hidden md:table-cell">Supply</TableHead>
-              <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="text-right pr-6">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -115,11 +114,6 @@ export function TokenTable({ tokens, isLoading, onSelect }: TokenTableProps) {
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {formatNumber(token.supply)}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <Badge variant={token.isListed ? "default" : "secondary"}>
-                    {token.isListed ? "Listed" : "Pending"}
-                  </Badge>
                 </TableCell>
                 <TableCell className="text-right pr-6">
                   <Button

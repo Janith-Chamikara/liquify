@@ -56,6 +56,13 @@ export interface SwapResult {
   amountOut: number;
 }
 
+export interface WithdrawLiquidityResult {
+  signature: string;
+  lpAmount: number;
+  amountA: number;
+  amountB: number;
+}
+
 export const useAnchorProgram = () => {
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -233,6 +240,75 @@ export const useAnchorProgram = () => {
   };
 
   /**
+   * Withdraw liquidity from a pool (burn LP tokens and receive proportional share)
+   */
+  const withdrawLiquidity = async (
+    tokenAMint: string,
+    tokenBMint: string,
+    lpAmount: number,
+    lpDecimals: number = 6,
+    reserveA: number,
+    reserveB: number,
+    lpTotalSupply: number,
+  ): Promise<WithdrawLiquidityResult> => {
+    if (!program || !wallet.publicKey) {
+      throw new Error("Wallet not connected");
+    }
+
+    console.log(reserveA, reserveB);
+
+    const tokenAMintPubkey = new PublicKey(tokenAMint);
+    const tokenBMintPubkey = new PublicKey(tokenBMint);
+
+    const addresses = await derivePoolAddresses(
+      tokenAMintPubkey,
+      tokenBMintPubkey,
+    );
+
+    // Get user's token accounts
+    const userA = await getAssociatedTokenAddress(
+      tokenAMintPubkey,
+      wallet.publicKey,
+    );
+
+    const userB = await getAssociatedTokenAddress(
+      tokenBMintPubkey,
+      wallet.publicKey,
+    );
+
+    // Get user's LP token account
+    const userLp = await getAssociatedTokenAddress(
+      addresses.lpMint,
+      wallet.publicKey,
+    );
+
+    // Convert LP amount to raw
+    const lpAmountRaw = new BN(lpAmount * Math.pow(10, lpDecimals));
+
+    // Calculate expected amounts out
+    const sharePercent = lpAmount / lpTotalSupply;
+    const amountA = reserveA * sharePercent;
+    const amountB = reserveB * sharePercent;
+
+    const tx = await program.methods
+      .withdrawLiquidity(lpAmountRaw)
+      .accounts({
+        user: wallet.publicKey,
+        pool: addresses.pool,
+        vaultA: addresses.vaultA,
+        vaultB: addresses.vaultB,
+        lpMint: addresses.lpMint,
+        userA,
+        userB,
+        userLp,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    return { signature: tx, lpAmount, amountA, amountB };
+  };
+
+  /**
    * Get pool addresses without initializing
    */
   const getPoolAddresses = async (
@@ -370,6 +446,46 @@ export const useAnchorProgram = () => {
     return { amountOut, priceImpact, fee };
   };
 
+  /**
+   * Get user's LP token balance for a specific pool
+   */
+  const getUserLpBalance = async (
+    tokenAMint: string,
+    tokenBMint: string,
+    decimals: number = 6,
+  ): Promise<number> => {
+    if (!wallet.publicKey) {
+      return 0;
+    }
+
+    try {
+      const tokenAMintPubkey = new PublicKey(tokenAMint);
+      const tokenBMintPubkey = new PublicKey(tokenBMint);
+
+      const addresses = await derivePoolAddresses(
+        tokenAMintPubkey,
+        tokenBMintPubkey,
+      );
+
+      // Get user's LP token account
+      const userLpAccount = await getAssociatedTokenAddress(
+        addresses.lpMint,
+        wallet.publicKey,
+      );
+
+      // Fetch the token account balance
+      const accountInfo =
+        await connection.getTokenAccountBalance(userLpAccount);
+      const balance = Number(accountInfo.value.amount) / Math.pow(10, decimals);
+
+      return balance;
+    } catch (error) {
+      // Account doesn't exist or other error
+      console.log("LP balance fetch error (likely no LP tokens):", error);
+      return 0;
+    }
+  };
+
   return {
     program,
     provider,
@@ -377,10 +493,12 @@ export const useAnchorProgram = () => {
     walletPublicKey: wallet.publicKey?.toString(),
     initializePool,
     depositLiquidity,
+    withdrawLiquidity,
     getPoolAddresses,
     poolExists,
     derivePoolAddresses,
     swap,
     calculateSwapOutput,
+    getUserLpBalance,
   };
 };

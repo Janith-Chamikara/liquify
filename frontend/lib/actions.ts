@@ -328,3 +328,41 @@ export const addLiquidity = async (data: {
     }
   }
 };
+
+export const withdrawLiquidity = async (data: {
+  poolAddress: string;
+  lpAmount: number;
+  amountA: number;
+  amountB: number;
+  newReserveA: number;
+  newReserveB: number;
+  txSignature: string;
+}) => {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        status: "ERROR",
+        message: "Please sign in first",
+      } as ResponseStatus;
+    }
+    const token = await getAuthToken();
+    const response = await api.post("/pool/withdraw-liquidity", data, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return {
+      message: "Liquidity withdrawn successfully",
+      data: response.data,
+      status: "SUCCESS",
+    } as ResponseStatus;
+  } catch (err) {
+    console.log(err);
+    if (isAxiosError(err)) {
+      return {
+        status: "ERROR",
+        message: err.response?.data.message,
+      } as ResponseStatus;
+    }
+  }
+};

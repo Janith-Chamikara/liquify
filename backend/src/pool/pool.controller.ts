@@ -5,6 +5,7 @@ import {
   RecordSwapDto,
   RecordPriceDto,
   AddLiquidityDto,
+  WithdrawLiquidityDto,
 } from './dto/record-swap.dto';
 
 @Controller('pool')
@@ -62,5 +63,10 @@ export class PoolController {
   @Post('add-liquidity')
   async addLiquidity(@Body() addLiquidityDto: AddLiquidityDto) {
     return this.poolService.addLiquidity(addLiquidityDto);
+  }
+
+  @Post('withdraw-liquidity')
+  async withdrawLiquidity(@Body() withdrawLiquidityDto: WithdrawLiquidityDto) {
+    return this.poolService.withdrawLiquidity(withdrawLiquidityDto);
   }
 }

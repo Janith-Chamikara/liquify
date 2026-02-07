@@ -15,7 +15,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      <section className="relative min-h-screen flex items-center justify-center">
+      <section className="relative py-2 flex items-center justify-center">
         <div className="absolute inset-0 bg-[linear-gradient(hsl(var(--foreground)/0.02)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground)/0.02)_1px,transparent_1px)] bg-[size:100px_100px]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.05)_0%,transparent_70%)]" />
         <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-foreground/[0.03] rounded-full blur-[120px]" />

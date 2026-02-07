@@ -76,7 +76,7 @@ export function PoolPriceChart({
   tokenBSymbol,
   currentPrice,
 }: Props) {
-  const [timeRange, setTimeRange] = useState<TimeRange>("24H");
+  const [timeRange, setTimeRange] = useState<TimeRange>("7D");
 
   const { data: priceHistoryResponse, isLoading } = useQuery<
     ResponseStatus | undefined
@@ -86,6 +86,8 @@ export function PoolPriceChart({
     enabled: !!poolAddress,
     staleTime: 30 * 1000,
   });
+
+  console.log(priceHistoryResponse);
 
   // Process the data
   const { chartData, priceChange, hasRealData } = useMemo(() => {

@@ -26,6 +26,8 @@ import { LiquidityPool } from "@/lib/types";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PoolPriceChart } from "@/components/pool-price-chart";
+import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
+import { useQuery } from "@tanstack/react-query";
 
 type Props = {
   pool: LiquidityPool | null;
@@ -35,6 +37,16 @@ type Props = {
 
 export function PoolDetailDialog({ pool, open, onOpenChange }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const { getUserLpBalance, connected } = useAnchorProgram();
+
+  const { data: userLpBalance = 0 } = useQuery({
+    queryKey: ["user-lp-balance", pool?.poolAddress, connected],
+    queryFn: async () => {
+      if (!pool) return null;
+      return await getUserLpBalance(pool?.tokenAMint, pool?.tokenBMint, 6);
+    },
+    enabled: connected,
+  });
 
   if (!pool) return null;
 
@@ -238,7 +250,7 @@ export function PoolDetailDialog({ pool, open, onOpenChange }: Props) {
                       <span className="font-medium">Total Supply</span>
                     </div>
                     <span className="font-mono font-semibold">
-                      {pool.lpTotalSupply.toLocaleString()}
+                      {userLpBalance?.toLocaleString()}
                     </span>
                   </div>
                   <Separator className="my-3" />

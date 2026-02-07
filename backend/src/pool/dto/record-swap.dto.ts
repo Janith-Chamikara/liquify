@@ -52,3 +52,26 @@ export class AddLiquidityDto {
   @IsString()
   txSignature: string;
 }
+
+export class WithdrawLiquidityDto {
+  @IsString()
+  poolAddress: string;
+
+  @IsNumber()
+  lpAmount: number;
+
+  @IsNumber()
+  amountA: number;
+
+  @IsNumber()
+  amountB: number;
+
+  @IsNumber()
+  newReserveA: number;
+
+  @IsNumber()
+  newReserveB: number;
+
+  @IsString()
+  txSignature: string;
+}

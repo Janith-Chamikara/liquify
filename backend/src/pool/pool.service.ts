@@ -267,6 +267,56 @@ export class PoolService {
     };
   }
 
+  async withdrawLiquidity(data: {
+    poolAddress: string;
+    lpAmount: number;
+    amountA: number;
+    amountB: number;
+    newReserveA: number;
+    newReserveB: number;
+    txSignature: string;
+  }) {
+    const pool = await this.prisma.liquidityPool.findUnique({
+      where: { poolAddress: data.poolAddress },
+    });
+
+    if (!pool) {
+      throw new BadRequestException('Pool not found');
+    }
+
+    // Calculate new LP supply (decrease)
+    const newLpSupply = pool.lpTotalSupply - data.lpAmount;
+
+    // Update pool reserves
+    await this.prisma.liquidityPool.update({
+      where: { poolAddress: data.poolAddress },
+      data: {
+        tokenAReserve: data.newReserveA,
+        tokenBReserve: data.newReserveB,
+        lpTotalSupply: Math.max(0, newLpSupply),
+      },
+    });
+
+    // Record price history
+    await this.recordPriceHistory({
+      poolAddress: data.poolAddress,
+      tokenAReserve: data.newReserveA,
+      tokenBReserve: data.newReserveB,
+      txSignature: data.txSignature,
+      txType: 'withdraw',
+    });
+
+    return {
+      success: true,
+      message: 'Liquidity withdrawn successfully',
+      amountA: data.amountA,
+      amountB: data.amountB,
+      newReserveA: data.newReserveA,
+      newReserveB: data.newReserveB,
+      newLpSupply: Math.max(0, newLpSupply),
+    };
+  }
+
   // Price History Methods
 
   async recordPriceHistory(data: {
