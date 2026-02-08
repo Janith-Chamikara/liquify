@@ -6,6 +6,7 @@ import { Compass, LayoutDashboard, Settings, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { mainNav, secondaryNav } from "@/lib/data";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
