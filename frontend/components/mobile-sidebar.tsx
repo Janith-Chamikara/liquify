@@ -4,15 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Coins,
   Compass,
-  PlusCircle,
   LayoutDashboard,
   Settings,
   HelpCircle,
   Menu,
   X,
-  Droplets,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,24 +22,9 @@ const mainNav = [
     icon: LayoutDashboard,
   },
   {
-    label: "Liquidity Pools",
-    href: "/dashboard/liquidity-pools",
-    icon: Droplets,
-  },
-  {
-    label: "My Coins",
-    href: "/dashboard/coins",
-    icon: Coins,
-  },
-  {
     label: "Explore",
     href: "/dashboard/explore",
     icon: Compass,
-  },
-  {
-    label: "Launch Token",
-    href: "/dashboard/launch",
-    icon: PlusCircle,
   },
 ];
 

@@ -9,7 +9,7 @@ use anchor_spl::metadata::{
 
 declare_id!("9NkKG55KStQNSdswjAt6tbQnNxTsLaBiExswWXXmcZw4");
 
-/// Integer square root for u128 using Newton's method
+/// Integer square root using Newton's method
 fn integer_sqrt(n: u128) -> u128 {
     if n == 0 {
         return 0;
@@ -27,10 +27,8 @@ fn integer_sqrt(n: u128) -> u128 {
 pub mod smart_contract {
     use super::*;
 
-    // -------------------------------------------------------------------------
     // INSTRUCTION 1: INITIALIZE POOL
     // Creates the Vaults, the LP Mint, and the Pool State account.
-    // -------------------------------------------------------------------------
     pub fn initialize(
         ctx: Context<Initialize>,
         token_a_symbol: String,
@@ -95,10 +93,8 @@ pub mod smart_contract {
         Ok(())
     }
 
-    // -------------------------------------------------------------------------
     // INSTRUCTION 2: DEPOSIT LIQUIDITY (ADD FUNDS)
     // User deposits A + B -> Program calculates math -> Program mints LP Tokens
-    // -------------------------------------------------------------------------
     pub fn deposit_liquidity(
         ctx: Context<DepositLiquidity>, 
         amount_a: u64, 
@@ -126,8 +122,7 @@ pub mod smart_contract {
                 .checked_mul(lp_supply as u128).unwrap()
                 .checked_div(reserve_a as u128).unwrap();
             
-            // Safety Check: Ensure they aren't manipulating the ratio
-            // For simplicity, we trust amount_a roughly determines the share.
+            
             liquidity_to_mint = share_a as u64;
             msg!("Adding Liquidity! Minting {} LP", liquidity_to_mint);
         }
@@ -179,10 +174,8 @@ pub mod smart_contract {
         Ok(())
     }
 
-    // -------------------------------------------------------------------------
     // INSTRUCTION 3: SWAP (TRADE)
     // User sends In -> Math calculates Out -> Program sends Out
-    // -------------------------------------------------------------------------
     pub fn swap(ctx: Context<Swap>, amount_in: u64, min_amount_out: u64) -> Result<()> {
         let pool = &ctx.accounts.pool;
 
@@ -222,7 +215,6 @@ pub mod smart_contract {
         token::transfer(transfer_in_ctx, amount_in)?;
 
         // 6. Transfer Output (Vault -> User)
-        // Requires PDA Signing
         let seeds = &[
             b"pool", 
             pool.token_a_mint.as_ref(), 
@@ -246,10 +238,8 @@ pub mod smart_contract {
         Ok(())
     }
 
-    // -------------------------------------------------------------------------
     // INSTRUCTION 4: WITHDRAW LIQUIDITY (CLOSE POSITION)
     // User burns LP -> Program sends back % of A and B
-    // -------------------------------------------------------------------------
     pub fn withdraw_liquidity(ctx: Context<WithdrawLiquidity>, lp_amount: u64) -> Result<()> {
         let pool = &ctx.accounts.pool;
         let total_supply = ctx.accounts.lp_mint.supply;
@@ -298,7 +288,6 @@ pub mod smart_contract {
         );
         token::transfer(transfer_a_ctx, amount_a)?;
 
-        // Return B
         let transfer_b_ctx = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             Transfer {
@@ -315,9 +304,6 @@ pub mod smart_contract {
     }
 }
 
-// -----------------------------------------------------------------------------
-// ACCOUNT VALIDATION STRUCTS (The "Security Guards")
-// -----------------------------------------------------------------------------
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -467,7 +453,7 @@ pub struct Swap<'info> {
     )]
     pub vault_b: Account<'info, TokenAccount>,
 
-    // Dynamic Input/Output - The client decides which way to swap
+    // Dynamic Input/Output
     #[account(mut)]
     pub input_vault: Account<'info, TokenAccount>,
     #[account(mut)]
@@ -524,9 +510,8 @@ pub struct WithdrawLiquidity<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-// -----------------------------------------------------------------------------
-// DATA STATE (The "Database")
-// -----------------------------------------------------------------------------
+
+// DATA STATE
 #[account]
 pub struct PoolState {
     pub token_a_mint: Pubkey, // 32

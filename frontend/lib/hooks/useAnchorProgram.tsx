@@ -3,13 +3,7 @@
 import { useMemo } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { AnchorProvider, Program, BN } from "@coral-xyz/anchor";
-import {
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY,
-  Transaction,
-  TransactionInstruction,
-} from "@solana/web3.js";
+import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -28,40 +22,13 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
 
 // Import the IDL JSON file
 import idl from "@/lib/idl/smart_contract.json";
-
-export interface PoolAddresses {
-  pool: PublicKey;
-  lpMint: PublicKey;
-  vaultA: PublicKey;
-  vaultB: PublicKey;
-}
-
-export interface InitializePoolResult {
-  signature: string;
-  poolAddress: string;
-  lpMintAddress: string;
-  vaultAAddress: string;
-  vaultBAddress: string;
-}
-
-export interface DepositLiquidityResult {
-  signature: string;
-  amountA: number;
-  amountB: number;
-}
-
-export interface SwapResult {
-  signature: string;
-  amountIn: number;
-  amountOut: number;
-}
-
-export interface WithdrawLiquidityResult {
-  signature: string;
-  lpAmount: number;
-  amountA: number;
-  amountB: number;
-}
+import {
+  DepositLiquidityResult,
+  InitializePoolResult,
+  PoolAddresses,
+  SwapResult,
+  WithdrawLiquidityResult,
+} from "../types";
 
 export const useAnchorProgram = () => {
   const { connection } = useConnection();
@@ -83,9 +50,6 @@ export const useAnchorProgram = () => {
     return new Program(idl as any, provider);
   }, [provider]);
 
-  /**
-   * Derive all PDA addresses for a liquidity pool
-   */
   const derivePoolAddresses = async (
     tokenAMint: PublicKey,
     tokenBMint: PublicKey,
@@ -103,11 +67,7 @@ export const useAnchorProgram = () => {
     );
 
     // Vault A: ATA for pool with token_a_mint
-    const vaultA = await getAssociatedTokenAddress(
-      tokenAMint,
-      pool,
-      true, // allowOwnerOffCurve for PDAs
-    );
+    const vaultA = await getAssociatedTokenAddress(tokenAMint, pool, true);
 
     // Vault B: ATA for pool with token_b_mint
     const vaultB = await getAssociatedTokenAddress(tokenBMint, pool, true);
@@ -115,9 +75,64 @@ export const useAnchorProgram = () => {
     return { pool, lpMint, vaultA, vaultB };
   };
 
-  /**
-   * Initialize a new liquidity pool
-   */
+  const getOnChainPoolData = async (
+    tokenAMint: string,
+    tokenBMint: string,
+  ): Promise<{
+    reserveA: number;
+    reserveB: number;
+    lpTotalSupply: number;
+    tokenADecimals: number;
+    tokenBDecimals: number;
+  } | null> => {
+    try {
+      const tokenAMintPubkey = new PublicKey(tokenAMint);
+      const tokenBMintPubkey = new PublicKey(tokenBMint);
+
+      const addresses = await derivePoolAddresses(
+        tokenAMintPubkey,
+        tokenBMintPubkey,
+      );
+
+      const [
+        vaultAInfo,
+        vaultBInfo,
+        lpMintInfo,
+        tokenAMintInfo,
+        tokenBMintInfo,
+      ] = await Promise.all([
+        connection.getTokenAccountBalance(addresses.vaultA),
+        connection.getTokenAccountBalance(addresses.vaultB),
+        connection.getTokenSupply(addresses.lpMint),
+        connection.getParsedAccountInfo(tokenAMintPubkey),
+        connection.getParsedAccountInfo(tokenBMintPubkey),
+      ]);
+
+      // Extract decimals from mint info
+      const tokenADecimals =
+        (tokenAMintInfo.value?.data as any)?.parsed?.info?.decimals || 6;
+      const tokenBDecimals =
+        (tokenBMintInfo.value?.data as any)?.parsed?.info?.decimals || 6;
+
+      const reserveA =
+        Number(vaultAInfo.value.amount) / Math.pow(10, tokenADecimals);
+      const reserveB =
+        Number(vaultBInfo.value.amount) / Math.pow(10, tokenBDecimals);
+      const lpTotalSupply = Number(lpMintInfo.value.amount) / Math.pow(10, 6);
+
+      return {
+        reserveA,
+        reserveB,
+        lpTotalSupply,
+        tokenADecimals,
+        tokenBDecimals,
+      };
+    } catch (error) {
+      console.error("Failed to fetch on-chain pool data:", error);
+      return null;
+    }
+  };
+
   const initializePool = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -174,9 +189,6 @@ export const useAnchorProgram = () => {
     };
   };
 
-  /**
-   * Deposit initial liquidity into a pool
-   */
   const depositLiquidity = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -239,9 +251,6 @@ export const useAnchorProgram = () => {
     return { signature: tx, amountA, amountB };
   };
 
-  /**
-   * Withdraw liquidity from a pool (burn LP tokens and receive proportional share)
-   */
   const withdrawLiquidity = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -308,9 +317,6 @@ export const useAnchorProgram = () => {
     return { signature: tx, lpAmount, amountA, amountB };
   };
 
-  /**
-   * Get pool addresses without initializing
-   */
   const getPoolAddresses = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -320,9 +326,6 @@ export const useAnchorProgram = () => {
     return derivePoolAddresses(tokenAMintPubkey, tokenBMintPubkey);
   };
 
-  /**
-   * Check if a pool exists
-   */
   const poolExists = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -338,15 +341,6 @@ export const useAnchorProgram = () => {
     }
   };
 
-  /**
-   * Swap tokens in a pool
-   * @param tokenAMint - Token A mint address
-   * @param tokenBMint - Token B mint address
-   * @param amountIn - Amount of input token to swap
-   * @param minAmountOut - Minimum amount of output token to receive (slippage protection)
-   * @param swapAToB - If true, swap token A for token B. If false, swap B for A.
-   * @param decimalsIn - Decimals of input token
-   */
   const swap = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -368,13 +362,11 @@ export const useAnchorProgram = () => {
       tokenBMintPubkey,
     );
 
-    // Determine input/output based on swap direction
     const inputMint = swapAToB ? tokenAMintPubkey : tokenBMintPubkey;
     const outputMint = swapAToB ? tokenBMintPubkey : tokenAMintPubkey;
     const inputVault = swapAToB ? addresses.vaultA : addresses.vaultB;
     const outputVault = swapAToB ? addresses.vaultB : addresses.vaultA;
 
-    // Get user's token accounts
     const userInput = await getAssociatedTokenAddress(
       inputMint,
       wallet.publicKey,
@@ -385,7 +377,6 @@ export const useAnchorProgram = () => {
       wallet.publicKey,
     );
 
-    // Convert amounts to raw amounts (with decimals)
     const amountInRaw = new BN(amountIn * Math.pow(10, decimalsIn));
     const minAmountOutRaw = new BN(minAmountOut * Math.pow(10, decimalsOut));
 
@@ -411,13 +402,6 @@ export const useAnchorProgram = () => {
     };
   };
 
-  /**
-   * Calculate expected output amount for a swap (using constant product formula)
-   * @param reserveIn - Reserve of input token
-   * @param reserveOut - Reserve of output token
-   * @param amountIn - Amount of input token
-   * @param feePercent - Fee percentage (default 0.3%)
-   */
   const calculateSwapOutput = (
     reserveIn: number,
     reserveOut: number,
@@ -446,9 +430,6 @@ export const useAnchorProgram = () => {
     return { amountOut, priceImpact, fee };
   };
 
-  /**
-   * Get user's LP token balance for a specific pool
-   */
   const getUserLpBalance = async (
     tokenAMint: string,
     tokenBMint: string,
@@ -500,5 +481,6 @@ export const useAnchorProgram = () => {
     swap,
     calculateSwapOutput,
     getUserLpBalance,
+    getOnChainPoolData,
   };
 };

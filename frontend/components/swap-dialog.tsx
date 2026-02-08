@@ -25,9 +25,10 @@ import {
 } from "lucide-react";
 import { useAnchorProgram } from "@/lib/hooks/useAnchorProgram";
 import { LiquidityPool } from "@/lib/types";
-import { recordSwap } from "@/lib/actions";
+import { recordSwap, recordTransaction } from "@/lib/actions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 type Props = {
   pool: LiquidityPool | null;
@@ -38,6 +39,7 @@ type Props = {
 
 export function SwapDialog({ pool, open, onOpenChange, onSwapSuccess }: Props) {
   const { swap, calculateSwapOutput, connected } = useAnchorProgram();
+  const { publicKey } = useWallet();
 
   const [amountIn, setAmountIn] = useState("");
   const [swapAToB, setSwapAToB] = useState(true);
@@ -126,6 +128,22 @@ export function SwapDialog({ pool, open, onOpenChange, onSwapSuccess }: Props) {
         tokenBReserve: newReserveB,
         txSignature: result.signature,
       });
+
+      // Record the transaction for history
+      if (publicKey) {
+        await recordTransaction({
+          txSignature: result.signature,
+          txType: "swap",
+          walletAddress: publicKey.toBase58(),
+          poolAddress: pool.poolAddress,
+          tokenInMint: inputMint,
+          tokenOutMint: outputMint,
+          tokenInSymbol: inputToken?.symbol,
+          tokenOutSymbol: outputToken?.symbol,
+          amountIn: amount,
+          amountOut: swapOutput.amountOut,
+        });
+      }
 
       toast.success("Swap successful!", {
         description: `Swapped ${amount} ${inputToken?.symbol} for ${swapOutput.amountOut.toFixed(6)} ${outputToken?.symbol}`,

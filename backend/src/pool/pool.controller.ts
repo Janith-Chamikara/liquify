@@ -7,6 +7,7 @@ import {
   AddLiquidityDto,
   WithdrawLiquidityDto,
 } from './dto/record-swap.dto';
+import { RecordTransactionDto } from './dto/transaction.dto';
 
 @Controller('pool')
 export class PoolController {
@@ -68,5 +69,33 @@ export class PoolController {
   @Post('withdraw-liquidity')
   async withdrawLiquidity(@Body() withdrawLiquidityDto: WithdrawLiquidityDto) {
     return this.poolService.withdrawLiquidity(withdrawLiquidityDto);
+  }
+
+  // Transaction History Endpoints
+
+  @Post('transaction')
+  async recordTransaction(@Body() recordTransactionDto: RecordTransactionDto) {
+    return this.poolService.recordTransaction(recordTransactionDto);
+  }
+
+  @Get('transactions/:walletAddress')
+  async getTransactionsByWallet(
+    @Param('walletAddress') walletAddress: string,
+    @Query('txType') txType?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    return this.poolService.getTransactionsByWallet(walletAddress, {
+      txType,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined,
+    });
+  }
+
+  @Get('transactions-recent')
+  async getRecentTransactions(@Query('limit') limit?: string) {
+    return this.poolService.getRecentTransactions(
+      limit ? parseInt(limit, 10) : 20,
+    );
   }
 }
